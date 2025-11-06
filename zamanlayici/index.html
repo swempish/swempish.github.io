@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YKS Zaman Yönetim Aracı</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tone.js CDN (Ses için) - KALDIRILDI -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Ekran geçişleri için yumuşak animasyon */
+        .screen {
+            transition: opacity 0.3s ease-in-out;
+        }
+        .hidden-screen {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+            transform: scale(0.95);
+        }
+        .visible-screen {
+            opacity: 1;
+            transform: scale(1);
+        }
+        /* Zamanlayıcı metninin titremesini önlemek için */
+        .timer-text {
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen overflow-hidden">
+
+    <div class="container mx-auto p-4 max-w-lg">
+
+        <!-- 1. ANA MENÜ EKRANI -->
+        <div id="menu-screen" class="screen visible-screen w-full">
+            <h1 class="text-4xl font-bold text-center mb-10 text-indigo-300">Çalışma Modu Seç</h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Pomodoro Kartı -->
+                <div id="select-pomodoro" class="bg-gray-800 p-8 rounded-2xl shadow-xl cursor-pointer transform hover:scale-105 transition-transform duration-300 flex flex-col items-center text-center">
+                    <svg class="w-16 h-16 text-indigo-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <h2 class="text-2xl font-semibold mb-2">Pomodoro</h2>
+                    <p class="text-gray-400 text-sm">Klasik çalışma ve mola döngüsü.</p>
+                </div>
+                <!-- Soru Sayacı Kartı -->
+                <div id="select-question-timer" class="bg-gray-800 p-8 rounded-2xl shadow-xl cursor-pointer transform hover:scale-105 transition-transform duration-300 flex flex-col items-center text-center">
+                    <svg class="w-16 h-16 text-teal-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    <h2 class="text-2xl font-semibold mb-2">Soru Sayacı</h2>
+                    <p class="text-gray-400 text-sm">Soru başına zaman tut, otomatik ilerle.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. POMODORO EKRANI -->
+        <div id="pomodoro-screen" class="screen hidden-screen w-full">
+            <button id="pomodoro-back" class="absolute top-6 left-6 text-gray-400 hover:text-white transition-colors">&larr; Menü</button>
+            <h1 class="text-4xl font-bold text-center mb-8 text-indigo-300">Pomodoro</h1>
+            
+            <!-- Ayarlar -->
+            <div id="pomodoro-settings" class="bg-gray-800 p-6 rounded-2xl shadow-lg mb-8">
+                <div class="flex justify-between gap-4 mb-4">
+                    <label class="block text-gray-400 w-1/2">
+                        Çalışma (dk):
+                        <input id="pomodoro-work-input" type="number" value="25" min="1" class="w-full bg-gray-700 text-white p-2 rounded-lg mt-1 border-2 border-gray-700 focus:border-indigo-500 focus:outline-none">
+                    </label>
+                    <label class="block text-gray-400 w-1/2">
+                        Mola (dk):
+                        <input id="pomodoro-break-input" type="number" value="5" min="1" class="w-full bg-gray-700 text-white p-2 rounded-lg mt-1 border-2 border-gray-700 focus:border-teal-500 focus:outline-none">
+                    </label>
+                </div>
+                <button id="pomodoro-start" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg">
+                    Başlat
+                </button>
+            </div>
+
+            <!-- Zamanlayıcı -->
+            <div id="pomodoro-timer-display" class="hidden text-center">
+                <p id="pomodoro-status" class="text-2xl font-semibold text-indigo-300 mb-4">Çalışma</p>
+                <div id="pomodoro-time" class="timer-text text-8xl md:text-9xl font-bold text-white mb-8">25:00</div>
+                <div class="flex justify-center gap-4">
+                    <button id="pomodoro-pause" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">Duraklat</button>
+                    <button id="pomodoro-reset" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Sıfırla</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. SORU SAYACI EKRANI -->
+        <div id="question-timer-screen" class="screen hidden-screen w-full">
+            <button id="question-back" class="absolute top-6 left-6 text-gray-400 hover:text-white transition-colors">&larr; Menü</button>
+            <h1 class="text-4xl font-bold text-center mb-8 text-teal-300">Soru Sayacı</h1>
+
+            <!-- Ayarlar -->
+            <div id="question-settings" class="bg-gray-800 p-6 rounded-2xl shadow-lg mb-8">
+                <label class="block text-gray-400 mb-2">Soru Başına Süre:</label>
+                <div class="flex justify-center gap-4 mb-4">
+                    <input id="question-minutes-input" type="number" value="2" min="0" placeholder="Dakika" class="w-1/2 bg-gray-700 text-white p-2 rounded-lg border-2 border-gray-700 focus:border-teal-500 focus:outline-none">
+                    <input id="question-seconds-input" type="number" value="0" min="0" max="59" placeholder="Saniye" class="w-1/2 bg-gray-700 text-white p-2 rounded-lg border-2 border-gray-700 focus:border-teal-500 focus:outline-none">
+                </div>
+                <button id="question-start" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg">
+                    Oturumu Başlat
+                </button>
+            </div>
+
+            <!-- Zamanlayıcı -->
+            <div id="question-timer-running" class="hidden text-center">
+                <p class="text-2xl font-semibold text-teal-300 mb-2">
+                    Soru <span id="question-count">1</span>
+                </p>
+                <div id="question-time" class="timer-text text-8xl md:text-9xl font-bold text-white mb-6">02:00</div>
+                <p id="question-transition-msg" class="text-xl text-gray-400 h-8 transition-opacity duration-300 opacity-0"></p>
+                <button id="question-stop" class="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition-colors duration-300 shadow-lg">
+                    Durdur ve Özeti Gör
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. OTURUM ÖZETİ EKRANI (MODAL) -->
+        <div id="summary-screen" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div class="bg-gray-800 p-8 rounded-2xl shadow-xl max-w-sm w-full text-center transform transition-all duration-300 scale-95 opacity-0" id="summary-content">
+                <h2 class="text-3xl font-bold text-teal-300 mb-4">Oturum Tamamlandı</h2>
+                <div class="text-lg space-y-3">
+                    <p>Toplam Çözülen Soru: <span id="summary-questions" class="font-bold text-2xl text-white">0</span></p>
+                    <p>Geçen Toplam Süre: <span id="summary-time" class="font-bold text-2xl text-white">00:00</span></p>
+                </div>
+                <button id="summary-back-to-menu" class="mt-8 w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300">
+                    Ana Menüye Dön
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        window.onload = () => {
+
+            // --- DOM Elementleri ---
+            const screens = {
+                menu: document.getElementById('menu-screen'),
+                pomodoro: document.getElementById('pomodoro-screen'),
+                question: document.getElementById('question-timer-screen'),
+                summary: document.getElementById('summary-screen'),
+            };
+            const summaryContent = document.getElementById('summary-content');
+
+            // Menü
+            const selectPomodoroBtn = document.getElementById('select-pomodoro');
+            const selectQuestionBtn = document.getElementById('select-question-timer');
+
+            // Pomodoro
+            const pomodoroBackBtn = document.getElementById('pomodoro-back');
+            const pomodoroWorkInput = document.getElementById('pomodoro-work-input');
+            const pomodoroBreakInput = document.getElementById('pomodoro-break-input');
+            const pomodoroStartBtn = document.getElementById('pomodoro-start');
+            const pomodoroSettings = document.getElementById('pomodoro-settings');
+            const pomodoroTimerDisplay = document.getElementById('pomodoro-timer-display');
+            const pomodoroStatus = document.getElementById('pomodoro-status');
+            const pomodoroTime = document.getElementById('pomodoro-time');
+            const pomodoroPauseBtn = document.getElementById('pomodoro-pause');
+            const pomodoroResetBtn = document.getElementById('pomodoro-reset');
+
+            // Soru Sayacı
+            const questionBackBtn = document.getElementById('question-back');
+            const questionMinutesInput = document.getElementById('question-minutes-input');
+            const questionSecondsInput = document.getElementById('question-seconds-input');
+            const questionStartBtn = document.getElementById('question-start');
+            const questionSettings = document.getElementById('question-settings');
+            const questionTimerRunning = document.getElementById('question-timer-running');
+            const questionCountDisplay = document.getElementById('question-count');
+            const questionTimeDisplay = document.getElementById('question-time');
+            const questionTransitionMsg = document.getElementById('question-transition-msg');
+            const questionStopBtn = document.getElementById('question-stop');
+
+            // Özet
+            const summaryQuestions = document.getElementById('summary-questions');
+            const summaryTime = document.getElementById('summary-time');
+            const summaryBackBtn = document.getElementById('summary-back-to-menu');
+
+            // --- Global Durum (State) ---
+            let timerInterval = null;
+            let audioInitialized = false;
+            let audioCtx = null; // Tone.js 'synth' yerine AudioContext kullanacağız
+
+            // --- Ses Fonksiyonları (Web Audio API ile) ---
+
+            // Sesi, kullanıcı bir butona tıkladığında başlatmalıyız (tarayıcı politikası)
+            async function initAudio() {
+                if (!audioInitialized) {
+                    try {
+                        // Web Audio API'yi başlat
+                        if (!audioCtx) {
+                            // Eski tarayıcılar için 'webkit' ön ekini de destekle
+                            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        }
+                        
+                        // Tarayıcılar, kullanıcı etkileşimi olmadan sesi başlatmaz.
+                        // 'suspended' (askıda) durumdaysa, 'resume' (devam ettir) ile aktifleştir.
+                        if (audioCtx.state === 'suspended') {
+                            await audioCtx.resume();
+                        }
+                        
+                        audioInitialized = true;
+                        console.log("Web Audio API bağlamı başarıyla başlatıldı.");
+                    } catch (error) {
+                        console.error("AudioContext başlatılamadı:", error.message);
+                        // Hata olsa bile uygulama ses olmadan çalışmaya devam etsin
+                    }
+                }
+            }
+
+            /**
+             * Süre bittiğinde çalan ana "Bip" sesi (A5 notası - 880Hz)
+             */
+            function playEndBeep() {
+                if (!audioCtx) {
+                    console.log("Beep çalınamadı: AudioContext başlatılmadı.");
+                    return;
+                }
+
+                try {
+                    const now = audioCtx.currentTime;
+                    // Osilatör (ses dalgası üreteci) oluştur
+                    const oscillator = audioCtx.createOscillator();
+                    // Gain (ses seviyesi) düğümü oluştur (ani "pop" sesini engeller)
+                    const gainNode = audioCtx.createGain();
+
+                    oscillator.type = 'sine'; // Hoş, yumuşak bir ton
+                    oscillator.frequency.setValueAtTime(880, now); // A5 notası (yüksek bir 'bip')
+
+                    // Düğümleri birbirine bağla: Osilatör -> Gain -> Hoparlörler
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+
+                    // Ses zamanlaması (ani başlama/bitişi engellemek için)
+                    gainNode.gain.setValueAtTime(0.3, now); // Başlangıç sesi (çok yüksek değil)
+                    // Sesi 0.3 saniye içinde yavaşça azaltarak bitir
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.3); 
+
+                    oscillator.start(now); // Sesi hemen başlat
+                    oscillator.stop(now + 0.35); // Ses kısıldıktan hemen sonra osilatörü durdur
+                    
+                } catch (error) {
+                    console.error("Beep çalınırken hata:", error);
+                }
+            }
+
+            /**
+             * Geçiş süresi bittiğinde çalan "Başla" sinyali (C6 notası - ~1046Hz)
+             * Farklı ve daha kısa olması için frekansı değiştirildi.
+             */
+            function playStartBeep() {
+                if (!audioCtx) {
+                    console.log("Beep çalınamadı: AudioContext başlatılmadı.");
+                    return;
+                }
+
+                try {
+                    const now = audioCtx.currentTime;
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+
+                    oscillator.type = 'triangle'; // 'sine' yerine biraz daha farklı bir ton
+                    oscillator.frequency.setValueAtTime(1046.50, now); // C6 notası (daha yüksek)
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+
+                    // Daha kısa ve net bir sinyal
+                    gainNode.gain.setValueAtTime(0.2, now); // Biraz daha sessiz
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.2); 
+
+                    oscillator.start(now);
+                    oscillator.stop(now + 0.25);
+                    
+                } catch (error) {
+                    console.error("Başla sinyali çalınırken hata:", error);
+                }
+            }
+
+
+            // --- Navigasyon (Ekran Geçişleri) ---
+            function showScreen(screenName) {
+                Object.keys(screens).forEach(key => {
+                    const screen = screens[key];
+                    if (key === screenName) {
+                        if (key === 'summary') {
+                            screen.classList.remove('hidden');
+                            setTimeout(() => {
+                                summaryContent.classList.remove('scale-95', 'opacity-0');
+                            }, 10);
+                        } else {
+                            screen.classList.remove('hidden-screen');
+                            screen.classList.add('visible-screen');
+                        }
+                    } else {
+                        if (key === 'summary') {
+                            screen.classList.add('hidden');
+                            summaryContent.classList.add('scale-95', 'opacity-0');
+                        } else {
+                            screen.classList.add('hidden-screen');
+                            screen.classList.remove('visible-screen');
+                        }
+                    }
+                });
+            }
+
+            function resetAllTimers() {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                
+                // Pomodoro'yu sıfırla
+                pomodoroTimerDisplay.classList.add('hidden');
+                pomodoroSettings.classList.remove('hidden');
+                pomodoroPauseBtn.innerText = 'Duraklat';
+                
+                // Soru sayacını sıfırla
+                questionTimerRunning.classList.add('hidden');
+                questionSettings.classList.remove('hidden');
+                questionTimeDisplay.classList.remove('text-red-500', 'animate-pulse');
+                questionTransitionMsg.classList.add('opacity-0');
+            }
+
+            function goToMenu() {
+                resetAllTimers();
+                showScreen('menu');
+            }
+
+            selectPomodoroBtn.addEventListener('click', () => showScreen('pomodoro'));
+            selectQuestionBtn.addEventListener('click', () => showScreen('question'));
+            pomodoroBackBtn.addEventListener('click', goToMenu);
+            questionBackBtn.addEventListener('click', goToMenu);
+
+            // --- Yardımcı Fonksiyonlar ---
+            function formatTime(totalSeconds) {
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+
+            // --- Pomodoro Mantığı ---
+            let pomodoroState = {
+                timeLeft: 0,
+                isPaused: false,
+                mode: 'work', // 'work' or 'break'
+                workTime: 25 * 60,
+                breakTime: 5 * 60,
+            };
+
+            pomodoroStartBtn.addEventListener('click', async () => {
+                await initAudio(); // Ses başlatmayı bekle
+                pomodoroState.workTime = parseInt(pomodoroWorkInput.value) * 60;
+                pomodoroState.breakTime = parseInt(pomodoroBreakInput.value) * 60;
+                pomodoroState.timeLeft = pomodoroState.workTime;
+                pomodoroState.mode = 'work';
+                pomodoroState.isPaused = false;
+
+                pomodoroStatus.innerText = 'Çalışma';
+                pomodoroTime.innerText = formatTime(pomodoroState.timeLeft);
+                pomodoroSettings.classList.add('hidden');
+                pomodoroTimerDisplay.classList.remove('hidden');
+                pomodoroPauseBtn.innerText = 'Duraklat';
+
+                startPomodoroTimer();
+            });
+
+            function startPomodoroTimer() {
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    if (pomodoroState.isPaused) return;
+
+                    pomodoroState.timeLeft--;
+                    pomodoroTime.innerText = formatTime(pomodoroState.timeLeft);
+                    
+                    if (pomodoroState.timeLeft < 10) {
+                         pomodoroTime.classList.add('text-red-500', 'animate-pulse');
+                    } else {
+                        pomodoroTime.classList.remove('text-red-500', 'animate-pulse');
+                    }
+
+                    if (pomodoroState.timeLeft <= 0) {
+                        playEndBeep(); // Burayı playEndBeep olarak güncelledik
+                        // Mod değiştir
+                        if (pomodoroState.mode === 'work') {
+                            pomodoroState.mode = 'break';
+                            pomodoroState.timeLeft = pomodoroState.breakTime;
+                            pomodoroStatus.innerText = 'Mola';
+                            pomodoroTime.classList.remove('text-red-500', 'animate-pulse');
+                        } else {
+                            pomodoroState.mode = 'work';
+                            pomodoroState.timeLeft = pomodoroState.workTime;
+                            pomodoroStatus.innerText = 'Çalışma';
+                            pomodoroTime.classList.remove('text-red-500', 'animate-pulse');
+                        }
+                    }
+                }, 1000);
+            }
+
+            pomodoroPauseBtn.addEventListener('click', () => {
+                pomodoroState.isPaused = !pomodoroState.isPaused;
+                pomodoroPauseBtn.innerText = pomodoroState.isPaused ? 'Devam Et' : 'Duraklat';
+            });
+
+            pomodoroResetBtn.addEventListener('click', () => {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                pomodoroTimerDisplay.classList.add('hidden');
+                pomodoroSettings.classList.remove('hidden');
+                pomodoroTime.classList.remove('text-red-500', 'animate-pulse');
+            });
+
+            // --- Soru Sayacı Mantığı ---
+            let questionState = {
+                timePerQuestion: 120,
+                timeLeft: 120,
+                questionCount: 1,
+                totalSessionTime: 0,
+                isTransitioning: false
+            };
+
+            questionStartBtn.addEventListener('click', async () => {
+                await initAudio(); // Ses başlatmayı bekle
+                const minutes = parseInt(questionMinutesInput.value) || 0;
+                const seconds = parseInt(questionSecondsInput.value) || 0;
+                const totalTime = (minutes * 60) + seconds;
+
+                if (totalTime <= 0) return; // Geçerli bir süre girilmeli
+
+                questionState.timePerQuestion = totalTime;
+                questionState.timeLeft = totalTime;
+                questionState.questionCount = 1;
+                questionState.totalSessionTime = 0;
+                questionState.isTransitioning = false;
+
+                questionCountDisplay.innerText = '1';
+                questionTimeDisplay.innerText = formatTime(totalTime);
+                questionTimeDisplay.classList.remove('text-red-500', 'animate-pulse');
+
+                questionSettings.classList.add('hidden');
+                questionTimerRunning.classList.remove('hidden');
+
+                startQuestionTimer();
+            });
+
+            function startQuestionTimer() {
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    if (questionState.isTransitioning) return; // 5 saniyelik molada sayacı durdur
+
+                    questionState.timeLeft--;
+                    questionState.totalSessionTime++;
+                    questionTimeDisplay.innerText = formatTime(questionState.timeLeft);
+
+                    // Son 10 saniye animasyonu
+                    if (questionState.timeLeft < 10) {
+                        questionTimeDisplay.classList.add('text-red-500', 'animate-pulse');
+                    }
+
+                    if (questionState.timeLeft <= 0) {
+                        handleQuestionEnd();
+                    }
+                }, 1000);
+            }
+
+            function handleQuestionEnd() {
+                playEndBeep(); // Orijinal 'bip' sesi (Süre bitti)
+                clearInterval(timerInterval); // Ana sayacı durdur
+                timerInterval = null;
+                questionState.isTransitioning = true;
+                questionTimeDisplay.classList.remove('text-red-500', 'animate-pulse');
+                questionTransitionMsg.innerText = 'Hazırlan...';
+                questionTransitionMsg.classList.remove('opacity-0');
+
+                // 5 saniyelik geçiş süresi
+                let transitionTimeLeft = 5;
+                const transitionInterval = setInterval(() => {
+                    transitionTimeLeft--;
+                    questionTimeDisplay.innerText = `00:0${transitionTimeLeft}`;
+                    if (transitionTimeLeft <= 0) {
+                        clearInterval(transitionInterval);
+                        
+                        // YENİ: Geçiş süresi bittiğinde 'başla' sinyalini çal
+                        playStartBeep(); 
+
+                        // Yeni soruya geç
+                        questionState.questionCount++;
+                        questionState.timeLeft = questionState.timePerQuestion;
+                        questionState.isTransitioning = false;
+
+                        questionCountDisplay.innerText = questionState.questionCount;
+                        questionTimeDisplay.innerText = formatTime(questionState.timeLeft);
+                        questionTransitionMsg.classList.add('opacity-0');
+
+                        startQuestionTimer(); // Ana sayacı tekrar başlat
+                    }
+                }, 1000);
+            }
+
+            questionStopBtn.addEventListener('click', () => {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                
+                // Özeti göster
+                summaryQuestions.innerText = questionState.questionCount;
+                summaryTime.innerText = formatTime(questionState.totalSessionTime);
+                showScreen('summary');
+            });
+
+            summaryBackBtn.addEventListener('click', () => {
+                showScreen('menu');
+                // Ekran geçiş animasyonu için kısa bir gecikme
+                setTimeout(resetAllTimers, 300);
+            });
+
+            // Başlangıç ekranı
+            showScreen('menu');
+
+        }; // K
