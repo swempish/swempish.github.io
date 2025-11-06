@@ -183,7 +183,7 @@
             // --- Global Durum (State) ---
             let timerInterval = null;
             let audioInitialized = false;
-            let audioCtx = null; // Tone.js 'synth' yerine AudioContext kullanacağız
+            let audioCtx = null; // Web Audio API Context
 
             // --- Ses Fonksiyonları (Web Audio API ile) ---
 
@@ -518,4 +518,7 @@
             // Başlangıç ekranı
             showScreen('menu');
 
-        }; // K
+        }; // Kapanış parantezi window.onload için
+    </script>
+</body>
+</html>
