@@ -8,7 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Tone.js CDN (Ses için) - KALDIRILDI -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -92,15 +91,21 @@
         <!-- 3. SORU SAYACI EKRANI -->
         <div id="question-timer-screen" class="screen hidden-screen w-full">
             <button id="question-back" class="absolute top-6 left-6 text-gray-400 hover:text-white transition-colors">&larr; Menü</button>
-            <h1 class="text-4xl font-bold text-center mb-8 text-teal-300">Soru Sayacı</h1>
+            <h1 class="4xl font-bold text-center mb-8 text-teal-300">Soru Sayacı</h1>
 
             <!-- Ayarlar -->
             <div id="question-settings" class="bg-gray-800 p-6 rounded-2xl shadow-lg mb-8">
+                <!-- Soru Başına Süre -->
                 <label class="block text-gray-400 mb-2">Soru Başına Süre:</label>
                 <div class="flex justify-center gap-4 mb-4">
                     <input id="question-minutes-input" type="number" value="2" min="0" placeholder="Dakika" class="w-1/2 bg-gray-700 text-white p-2 rounded-lg border-2 border-gray-700 focus:border-teal-500 focus:outline-none">
                     <input id="question-seconds-input" type="number" value="0" min="0" max="59" placeholder="Saniye" class="w-1/2 bg-gray-700 text-white p-2 rounded-lg border-2 border-gray-700 focus:border-teal-500 focus:outline-none">
                 </div>
+                
+                <!-- Sorular Arası Geçiş Süresi (Yeni Ayar) -->
+                <label class="block text-gray-400 mb-2">Sorular Arası Geçiş (saniye):</label>
+                <input id="question-transition-input" type="number" value="5" min="1" max="60" class="w-full bg-gray-700 text-white p-2 rounded-lg border-2 border-gray-700 focus:border-teal-500 focus:outline-none mb-6">
+                
                 <button id="question-start" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg">
                     Oturumu Başlat
                 </button>
@@ -113,9 +118,16 @@
                 </p>
                 <div id="question-time" class="timer-text text-8xl md:text-9xl font-bold text-white mb-6">02:00</div>
                 <p id="question-transition-msg" class="text-xl text-gray-400 h-8 transition-opacity duration-300 opacity-0"></p>
-                <button id="question-stop" class="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition-colors duration-300 shadow-lg">
-                    Durdur ve Özeti Gör
-                </button>
+                
+                <!-- Butonlar -->
+                <div class="flex justify-center gap-4 mt-4">
+                    <button id="question-skip-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 shadow-lg">
+                        Erken Çözdüm (Atla)
+                    </button>
+                    <button id="question-stop" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 shadow-lg">
+                        Durdur ve Özeti Gör
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -167,6 +179,7 @@
             const questionBackBtn = document.getElementById('question-back');
             const questionMinutesInput = document.getElementById('question-minutes-input');
             const questionSecondsInput = document.getElementById('question-seconds-input');
+            const questionTransitionInput = document.getElementById('question-transition-input'); // YENİ INPUT
             const questionStartBtn = document.getElementById('question-start');
             const questionSettings = document.getElementById('question-settings');
             const questionTimerRunning = document.getElementById('question-timer-running');
@@ -174,6 +187,7 @@
             const questionTimeDisplay = document.getElementById('question-time');
             const questionTransitionMsg = document.getElementById('question-transition-msg');
             const questionStopBtn = document.getElementById('question-stop');
+            const questionSkipBtn = document.getElementById('question-skip-btn');
 
             // Özet
             const summaryQuestions = document.getElementById('summary-questions');
@@ -382,7 +396,7 @@
                     }
 
                     if (pomodoroState.timeLeft <= 0) {
-                        playEndBeep(); // Burayı playEndBeep olarak güncelledik
+                        playEndBeep(); 
                         // Mod değiştir
                         if (pomodoroState.mode === 'work') {
                             pomodoroState.mode = 'break';
@@ -415,6 +429,7 @@
             // --- Soru Sayacı Mantığı ---
             let questionState = {
                 timePerQuestion: 120,
+                transitionTime: 5, // YENİ: Geçiş süresi
                 timeLeft: 120,
                 questionCount: 1,
                 totalSessionTime: 0,
@@ -425,11 +440,13 @@
                 await initAudio(); // Ses başlatmayı bekle
                 const minutes = parseInt(questionMinutesInput.value) || 0;
                 const seconds = parseInt(questionSecondsInput.value) || 0;
+                const transition = parseInt(questionTransitionInput.value) || 5;
                 const totalTime = (minutes * 60) + seconds;
 
                 if (totalTime <= 0) return; // Geçerli bir süre girilmeli
 
                 questionState.timePerQuestion = totalTime;
+                questionState.transitionTime = transition; // Ayarlanan geçiş süresi
                 questionState.timeLeft = totalTime;
                 questionState.questionCount = 1;
                 questionState.totalSessionTime = 0;
@@ -448,7 +465,7 @@
             function startQuestionTimer() {
                 if (timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(() => {
-                    if (questionState.isTransitioning) return; // 5 saniyelik molada sayacı durdur
+                    if (questionState.isTransitioning) return; // Geçişte sayacı durdur
 
                     questionState.timeLeft--;
                     questionState.totalSessionTime++;
@@ -471,18 +488,17 @@
                 timerInterval = null;
                 questionState.isTransitioning = true;
                 questionTimeDisplay.classList.remove('text-red-500', 'animate-pulse');
-                questionTransitionMsg.innerText = 'Hazırlan...';
+                questionTransitionMsg.innerText = `Hazırlan... (${questionState.transitionTime} saniye)`;
                 questionTransitionMsg.classList.remove('opacity-0');
 
-                // 5 saniyelik geçiş süresi
-                let transitionTimeLeft = 5;
+                // Geçiş süresi
+                let transitionTimeLeft = questionState.transitionTime; // Ayarlanan süreyi kullan
                 const transitionInterval = setInterval(() => {
                     transitionTimeLeft--;
-                    questionTimeDisplay.innerText = `00:0${transitionTimeLeft}`;
+                    questionTimeDisplay.innerText = `00:${String(transitionTimeLeft).padStart(2, '0')}`;
                     if (transitionTimeLeft <= 0) {
                         clearInterval(transitionInterval);
                         
-                        // YENİ: Geçiş süresi bittiğinde 'başla' sinyalini çal
                         playStartBeep(); 
 
                         // Yeni soruya geç
@@ -498,6 +514,22 @@
                     }
                 }, 1000);
             }
+            
+            // Erken çözme (atlama) fonksiyonu
+            function skipQuestion() {
+                // Eğer zaten geçişteyse veya sayaç durmuşsa atlamayı engelle
+                if (questionState.isTransitioning || !timerInterval) {
+                    console.log("Geçişte veya sayaç durmuşken atlama yapılamaz.");
+                    return;
+                }
+                
+                // Kalan süreyi dikkate almadan hemen bitiş mantığını çağır
+                handleQuestionEnd();
+            }
+            
+            // Erken çözdüm butonuna dinleyici ekle
+            questionSkipBtn.addEventListener('click', skipQuestion);
+
 
             questionStopBtn.addEventListener('click', () => {
                 clearInterval(timerInterval);
@@ -518,7 +550,7 @@
             // Başlangıç ekranı
             showScreen('menu');
 
-        }; // Kapanış parantezi window.onload için
+        }; 
     </script>
 </body>
 </html>
